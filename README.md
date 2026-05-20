@@ -8,15 +8,31 @@ It checks English, French, and Portuguese localization files and produces:
 
 ## What it checks
 
-| Rule | String type | Required casing |
+Rules are defined in [`references/DIGIT_Content_Standards.md`](references/DIGIT_Content_Standards.md). The current ruleset:
+
+| Content type | Required casing | Applies to |
 |---|---|---|
-| Rule 1 | Buttons / CTAs (`ACTION_`, `BTN_`, `SAVE`, `CANCEL`, etc.) | Title Case |
-| Rule 2 | Body text, error messages, descriptions, help text | Sentence case |
-| Rule 3 | Headings, labels, captions | Sentence case |
-| FR rule | All French strings | Sentence case — Title Case flagged for review |
-| PT rule | All Portuguese strings | Sentence case — Title Case flagged for review |
+| Buttons / CTAs | Title Case | Keys with `ACTION_`, `BTN_`, `SAVE`, `CANCEL`, etc. |
+| Body text, descriptions, help text | Sentence case | Keys with `_description`, `_hint`, `_helpText`, `_tooltip`, etc. |
+| Error messages and validations | Sentence case | Keys with `_error`, `_message`, `ERROR`, `FAILED`, etc. |
+| Headings, labels, captions | Sentence case | Keys with `HEADING`, `HEADER`, `TITLE`, `_label_`, `CAPTION`, etc. |
+| All French strings | Sentence case | Title Case flagged for human review |
+| All Portuguese strings | Sentence case | Title Case flagged for human review |
 
 Column names are detected automatically — works with `English Messages`, `DIGIT_LOC_MESSAGE_HEADER_ENGLISH`, or any column whose name contains "english", "french", or "portuguese".
+
+## Repo structure
+
+```
+digit-localization-checker/
+├── SKILL.md                              # Skill logic — workflow, classification, output format
+├── references/
+│   └── DIGIT_Content_Standards.md       # ← All casing rules live here
+└── assets/
+    └── example-localizations.xlsx       # Sample input file for testing
+```
+
+**`SKILL.md` contains no hardcoded rules.** It reads `references/DIGIT_Content_Standards.md` at runtime and derives all conventions from the `## Rule:` sections there. When the standard changes, only the standards file needs updating.
 
 ## Installation
 
@@ -39,25 +55,32 @@ Just hand Claude a localization file or paste strings:
 
 Claude will produce a corrected `.xlsx` and a violations report.
 
-## Contributing rule changes
+## Updating the rules
 
-The casing rules live in `SKILL.md` under the **DIGIT Casing Rules** sections. To change a rule:
+**All casing rules live in [`references/DIGIT_Content_Standards.md`](references/DIGIT_Content_Standards.md) — not in `SKILL.md`.**
 
-1. Edit `SKILL.md` directly
-2. Update the relevant section (English Rule 1/2/3, French rule, or Portuguese rule)
-3. If adding a new violation type, add it to the **Violation Types** table
-4. Open a PR with a short description of what changed and why
+When the DIGIT Content Standards change:
 
-### Key patterns to know
+1. Open `references/DIGIT_Content_Standards.md`
+2. Find the relevant `## Rule:` block and update the `Convention:`, `Key patterns:`, or `Flag behavior:` line
+3. To add a new rule, copy any existing block and fill in all fields
+4. Open a PR — no changes to `SKILL.md` are needed
 
-String type is inferred from the `Code` key first, then string length and verb form:
+Each rule block looks like this:
 
-- `ACTION_`, `BTN_`, `BUTTON_`, `SUBMIT`, `SAVE`, `CANCEL`, `CREATE`, `ADD_`, `DELETE_`, `EDIT_` → CTA → Title Case
-- `_error`, `_message`, `_description`, `_hint`, `_helpText`, `_tooltip`, `_mandatory`, `DESCRIPTION`, `ERROR`, `FAILED` → Body → Sentence case
-- `TITLE`, `HEADER`, `HEADING`, `_label_`, `CAPTION` → Heading → Sentence case
+```markdown
+## Rule: CTA and button text
+- Convention: Title Case
+- Applies to: Interactive controls the user taps or clicks to take an action
+- Key patterns: `ACTION_`, `BTN_`, `SUBMIT`, `SAVE`, `CANCEL`, ...
+- Exceptions: Articles and conjunctions are lowercase unless first word
+- Languages: English
+- Flag behavior: Auto-correct
+- Violation type: `CTA_NOT_TITLE_CASE`
+```
 
-To add a new key pattern, find the `Classification Logic` section in `SKILL.md` and add the pattern to the appropriate rule.
+To change a convention (e.g. headings switch from Sentence Case to Title Case), edit the `Convention:` line in the relevant block. The skill picks it up immediately on the next run.
 
 ### Standards doc
 
-The underlying standard is the **DIGIT Content Standards & Guidelines 2.0** maintained by the eGovernments Foundation design team. If the standard changes, update `SKILL.md` to match.
+The underlying standard is the **DIGIT Content Standards & Guidelines 2.0** maintained by the eGovernments Foundation design team. The `references/DIGIT_Content_Standards.md` file in this repo should stay in sync with that document.
