@@ -24,6 +24,21 @@ Audit UI text strings for compliance with **DIGIT Content Standards & Guidelines
 
 ---
 
+## IMPORTANT — Read the standards before doing anything else
+
+**Before evaluating any string, read `references/DIGIT_Content_Standards.md` in full.**
+
+Derive ALL casing rules exclusively from the `## Rule:` sections in that file:
+- Each rule defines a `Convention:` (Title Case or Sentence Case), the `Key patterns:` that signal which strings it applies to, and the `Violation type:` to record.
+- Do not apply any casing rule not defined in that file.
+- If a string's content type has no matching rule, record it as `UNCATEGORIZED` rather than guessing.
+- If a rule's `Flag behavior:` is `Flag for review`, do not auto-correct — report the original string unchanged and note it in the violations report.
+- If a rule's `Flag behavior:` is `Auto-correct`, apply the convention and record the corrected form.
+
+The standards file is the single source of truth. When it changes, your behaviour changes automatically.
+
+---
+
 ## Language Column Detection
 
 DIGIT localization files use varying column name conventions across teams and versions. **Always detect language columns dynamically** by scanning the header row for these keywords (case-insensitive, anywhere in the column name):
@@ -42,110 +57,62 @@ If no language column is found at all, tell the user the column names you see an
 
 ---
 
-## DIGIT Casing Rules — English
-
-### Rule 1 — Button Text & CTAs → Title Case
-Capitalize first letter of every word **except** articles (a, an, the) and conjunctions (and, but, or, nor, for, so, yet) unless they are the first word.
-
-**Signals a string is a CTA/button:** short (1–5 words), imperative verb, or code key contains `ACTION_`, `BTN_`, `BUTTON_`, `SUBMIT`, `CANCEL`, `SAVE`, `CREATE`, `ADD_`, `DELETE_`, `EDIT_`, `CONFIRM`, or similar action patterns.
-
-✅ `Submit Feedback` | `Create Account` | `Add Member` | `Save Beneficiary`
-❌ `submit feedback` | `Submit feedback` | `add member`
-
-### Rule 2 — Body Text, Descriptions, Help Text, Error Messages, Validations → Sentence Case
-Capitalize only the **first letter** of the string. Proper nouns and text inside quotes retain their capitalisation.
-
-**Signals:** longer phrasing, contains "please", "must", "cannot", "failed", "successfully", or code key contains `_error`, `_message`, `_description`, `_hint`, `_alert`, `_info`, `_helpText`, `_tooltip`, `_mandatory`, `DESCRIPTION`, `ERROR`, `SUCCESS`, `FAILED`.
-
-✅ `Please enter a valid email address`
-✅ `Administration failed`
-❌ `Please Enter A Valid Email Address`
-❌ `administration failed` (missing first-letter cap)
-
-### Rule 3 — Headings, Labels, Captions → Sentence Case
-First letter capitalised, rest lowercase unless proper noun.
-
-**Signals:** code key contains `TITLE`, `HEADER`, `HEADING`, `_label_`, `_LABEL`, `CAPTION`.
-
-✅ `Beneficiary details` | `Date of birth`
-❌ `Beneficiary Details` | `Date Of Birth`
-
----
-
-## DIGIT Casing Rules — French
-
-French does **not** use Title Case. All string types in French use Sentence Case (capitalize first word only). Proper nouns retain capitalisation.
-
-**Flag for review** any French string where multiple words are capitalised — this likely mirrors English incorrectly.
-
-✅ `Soumettre` | `Ajouter un membre` | `Échec de l'administration`
-⚠️ `Ajouter Un Membre` → flag as `FRENCH_TITLE_CASE_REVIEW`
-
----
-
-## DIGIT Casing Rules — Portuguese
-
-Same as French: Sentence Case for all string types. Flag any string where multiple words are capitalised.
-
-✅ `Salvar` | `Adicionar membro` | `Falha na administração`
-⚠️ `Salvar Beneficiário` → flag as `PORTUGUESE_TITLE_CASE_REVIEW`
-
----
-
 ## Classification Logic
 
-When a string_key is not obvious, infer type from these signals (in priority order):
-1. **Key pattern** — strongest signal (see rules above)
-2. **String length** — 1–4 words strongly suggests CTA; 8+ words strongly suggests body/error
-3. **Verb form** — imperative verb at start (Submit, Add, Create) → CTA; descriptive/passive → body
-4. **Punctuation** — ends with `.` → body text; no punctuation → CTA or heading
+After reading the standards file, classify each string using the `Key patterns:` from the matching `## Rule:` block. Use this priority order when a string could match more than one rule:
 
-If type cannot be determined confidently, apply Sentence Case and note `violation_type` as `CASING_REVIEW_NEEDED`.
+1. **Key pattern match** — check the string's `Code` key against the `Key patterns:` in every rule; the first match wins
+2. **String length** — 1–4 words with no terminal punctuation suggests a CTA; 8+ words suggests body/error
+3. **Verb form** — imperative verb at start (e.g. Submit, Add, Create) suggests CTA; passive or declarative suggests body
+4. **Terminal punctuation** — ends with `.` suggests body text; no punctuation suggests CTA or heading
+
+If classification is still ambiguous after all four signals, record the violation type as `CASING_REVIEW_NEEDED`.
 
 ---
 
 ## Workflow
 
-### Step 1 — Identify Input Type and Detect Columns
+### Step 1 — Read the standards
+
+Read `references/DIGIT_Content_Standards.md` in full. Build your understanding of every `## Rule:` block before touching any strings.
+
+### Step 2 — Identify input type and detect columns
 
 | Input | Action |
 |---|---|
 | `.xlsx` file | Read all sheets; detect language columns by scanning headers for `english`, `french`, `portuguese` (case-insensitive). Process each detected language column. |
 | `.csv`, `.tsv` | Read rows; detect key + language columns the same way. |
 | `.json`, `.strings`, `.xml` | Parse key-value pairs; infer language from filename or ask user. |
-| Pasted text | Ask user to clarify string type (CTA / body / heading) if not obvious from keys. |
+| Pasted text | Ask user to clarify string type if not obvious from keys. |
 
-### Step 2 — Classify Each String
+### Step 3 — Classify and check each string
 
 For each string:
 - Determine language from column
-- Determine string type (CTA, body/error, heading) using Classification Logic above
-- Apply the corresponding casing rule
+- Classify the string type using Classification Logic above and the `Key patterns:` from the standards
+- Look up the required `Convention:` from the matching rule
+- Compare actual casing to required casing
 
-### Step 3 — Detect Violations
+### Step 4 — Record violations
 
-A violation exists when the actual casing differs from the required casing.
+A violation exists when the actual casing differs from the required convention, or when a `Flag for review` rule matches.
 
 Record every violation with:
 - `string_key`: the code/key identifier
 - `original`: the string as-is
-- `corrected`: the fixed version
-- `violation_type`: one of the values below
+- `corrected`: the fixed version (or the original unchanged if `Flag for review`)
+- `violation_type`: the `Violation type:` from the matching rule in the standards file
 - `language`: `EN`, `FR`, or `PT`
 
-**Violation Types:**
+**Universal violation types** (not language/rule-specific):
 
 | violation_type | Meaning |
 |---|---|
-| `CTA_NOT_TITLE_CASE` | Button/CTA text should be Title Case |
-| `BODY_NOT_SENTENCE_CASE` | Body/error/description should be Sentence Case |
-| `HEADING_NOT_SENTENCE_CASE` | Heading/label should be Sentence Case |
-| `FRENCH_TITLE_CASE_REVIEW` | French string uses Title Case — flag for human review |
-| `PORTUGUESE_TITLE_CASE_REVIEW` | Portuguese string uses Title Case — flag for human review |
 | `LEADING_TRAILING_SPACE` | Whitespace before or after the string |
-| `CASING_REVIEW_NEEDED` | Type could not be confidently determined |
+| `CASING_REVIEW_NEEDED` | String type could not be confidently determined |
+| `UNCATEGORIZED` | No matching rule found in the standards file |
 
-### Step 4 — Produce Outputs
+### Step 5 — Produce outputs
 
 **For .xlsx input (primary use case):**
 Use Python + openpyxl to:
@@ -156,13 +123,13 @@ Use Python + openpyxl to:
 - Produce a markdown violations table
 - Then provide the corrected text block
 
-### Step 5 — Summary
+### Step 6 — Summary
 
 After producing outputs, provide a short plain-language summary:
 - Total strings checked (by language)
 - Total violations found
 - Breakdown by `violation_type`
-- Any French or Portuguese strings flagged for human review
+- Any strings flagged for human review (from `Flag for review` rules)
 
 ---
 
@@ -171,8 +138,7 @@ After producing outputs, provide a short plain-language summary:
 - **Do not change meaning** — only fix casing, never reword.
 - **Preserve proper nouns** — names of countries, products, organisations retain their capitalisation.
 - **Preserve content inside quotes** — text within quotation marks keeps original casing.
-- **Single-word strings** — compliant in both Title Case and Sentence Case; flag only if ALL CAPS.
-- **French/Portuguese review flag** — corrections in these languages should be flagged with a note that a native speaker should confirm, since grammar rules (e.g. noun capitalisation) may require exceptions.
+- **Single-word strings** — apply the rule from the standards file; the only universal exception is ALL CAPS single words, which are always a violation regardless of rule.
 - **Empty cells** — skip; do not flag as violations.
 - **Whitespace-only cells** — skip.
 
@@ -180,7 +146,9 @@ After producing outputs, provide a short plain-language summary:
 
 ## Example
 
-**Input row (from any file format):**
+See `assets/example-localizations.xlsx` for a sample input file covering all rule types.
+
+**Example input row:**
 ```
 Code: ADD_MEMBER
 English: Add member
@@ -188,19 +156,11 @@ French: Ajouter Un Membre
 Portuguese: Adicionar Membro
 ```
 
-**Output (corrected):**
+**Expected output (corrected):**
 ```
-Code: ADD_MEMBER
-English: Add Member
-French: Ajouter Un Membre  ← unchanged in corrected sheet, flagged for review
-Portuguese: Adicionar Membro  ← unchanged in corrected sheet, flagged for review
-```
-
-**Violations report rows:**
-```
-ADD_MEMBER | Add member | Add Member | CTA_NOT_TITLE_CASE | EN
-ADD_MEMBER | Ajouter Un Membre | Ajouter un membre | FRENCH_TITLE_CASE_REVIEW | FR
-ADD_MEMBER | Adicionar Membro | Adicionar membro | PORTUGUESE_TITLE_CASE_REVIEW | PT
+English: Add Member          ← CTA_NOT_TITLE_CASE auto-corrected
+French: Ajouter Un Membre    ← unchanged; FRENCH_TITLE_CASE_REVIEW flagged for human review
+Portuguese: Adicionar Membro ← unchanged; PORTUGUESE_TITLE_CASE_REVIEW flagged for human review
 ```
 
 ---
@@ -210,3 +170,4 @@ ADD_MEMBER | Adicionar Membro | Adicionar membro | PORTUGUESE_TITLE_CASE_REVIEW 
 - If no `Code` column is found, use row number as `string_key`.
 - If a sheet is empty or has fewer than 2 rows, skip it and note it in the summary.
 - If column detection is ambiguous, list the headers you see and ask the user to confirm the mapping before proceeding.
+- If `references/DIGIT_Content_Standards.md` cannot be read, stop and tell the user — do not fall back to built-in rules.
